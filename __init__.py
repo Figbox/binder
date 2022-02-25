@@ -1,15 +1,14 @@
 import random
 
+from app.core.adaptor.DbAdaptor import DbAdaptor
+from app.core.module_class import ApiModule, TableModule
+from app.core.page_engine.PageAdaptor import PageAdaptor
+from app.modules.binder.table import BinderTable
+from app.modules.sample.table import SampleTable
 from fastapi import APIRouter, Body, Depends
 
-from app.core.adaptor.DbAdaptor import DbAdaptor
-from app.core.module_class import TableModule, ApiModule
-from app.core.page_engine.PageAdaptor import PageAdaptor
-from app.modules.sample.table import SampleTable
 
-
-# TODO: change class name
-class Sample(ApiModule, TableModule):
+class Binder(ApiModule, TableModule):
     def _register_api_bp(self, bp: APIRouter):
         @bp.get('/description')
         def description():
@@ -24,13 +23,15 @@ class Sample(ApiModule, TableModule):
         # テーブル関連
         # TODO: change table class
         @bp.post('/create', description='create data to table')
-        def create(dba: DbAdaptor = Depends(DbAdaptor(SampleTable).dba),
-                   data: str = Body(..., embed=True)):
+        def create(dba: DbAdaptor = Depends(DbAdaptor(BinderTable).dba),
+                   link: str = Body(..., embed=True),
+                   title: str = Body(..., embed=True),
+                   content: str = Body(..., embed=True),):
             """create data into the table"""
-            data = SampleTable(data=data,
-                               link=str(random.randint(0, 99999)),
-                               title=data,
-                               content=data)
+            data = BinderTable(template_path='/temp.html',
+                               link=link,
+                               title=title,
+                               content=content)
             return dba.add(data)
 
         # TODO: change table class
@@ -58,24 +59,20 @@ class Sample(ApiModule, TableModule):
             return page_adaptor.bind(SampleTable, link, 'sample/temp.html')
 
         # 任意なプレフィックスを作成する為
-        abc_bp = self._register_free_prefix('/abc', 'abc')
+        page_bp = self._register_free_prefix('/binder', 'binder')
 
-        @abc_bp.get('/sample', description='you used a free prefix')
-        def abc_sample():
-            return 'you used a free prefix'
+        @page_bp.get('/{link}', description='link to page')
+        def page_link(link: str, page_adaptor: PageAdaptor = Depends()):
+            return page_adaptor.bind(BinderTable, link, 'binder/temp.html')
 
     def get_table(self) -> list:
-        # TODO: change table class
-        return [SampleTable]
+        return [BinderTable]
 
     def _get_tag(self) -> str:
-        # TODO: change tag
-        return 'サンプルモジュール'
+        return 'binder module'
 
     def get_module_name(self) -> str:
-        # TODO: change module name
-        return 'sample'
+        return 'binder'
 
 
-# TODO: change module name
-sample = Sample()
+binder = Binder()
